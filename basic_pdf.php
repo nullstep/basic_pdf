@@ -14,7 +14,7 @@ defined('ABSPATH') or die('⎺\_(ツ)_/⎺');
 // defines      
 
 define('_PLUGIN_BASIC_PDF', 'basic_pdf');
-define('_PLUGIN_BASIC_PDF_ICON', '');
+define('_PLUGIN_BASIC_PDF_ICON', '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><path fill="#a7aaad" d="M305.9,133.4h-141.5v233.1h171.3s0-204.7,0-204.7h-29.8v-28.4ZM307.7,332.1h-114.9c-9.6,0-9.6-14.9,0-14.9h114.9c9.6,0,9.6,14.9,0,14.9ZM310,298.8h-114.9c-9.6,0-9.6-14.9,0-14.9h114.9c9.6,0,9.6,14.9,0,14.9ZM310,263.4h-114.9c-9.6,0-9.6-14.9,0-14.9h114.9c9.6,0,9.6,14.9,0,14.9ZM310,230.7h-114.9c-9.6,0-9.6-14.9,0-14.9h114.9c9.6,0,9.6,14.9,0,14.9ZM310,180.5c9.6,0,9.6,14.9,0,14.9h-114.9c-9.6,0-9.6-14.9,0-14.9h114.9Z"/><path fill="#a7aaad" d="M250,9.8L42,129.9v240.2l208,120.1,208-120.1v-240.2L250,9.8ZM353.6,384.5h-207.1V115.5h168.6l38.5,37.3v231.6Z"/></svg>');
 
 define('_URL_BASIC_PDF', plugin_dir_url(__FILE__));
 define('_PATH_BASIC_PDF', plugin_dir_path(__FILE__));
