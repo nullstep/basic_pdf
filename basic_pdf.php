@@ -504,11 +504,6 @@ function bpdf_generate_pdf($width, $height, $config, $filename) {
 
 					break;
 				}
-				case 'gca': {
-					bpdf_pdf_graphic('asset_chosen', $data, $pdf);
-
-					break;
-				}
 				case 'ta': {
 					$font = pathinfo($data['text_font'], PATHINFO_FILENAME);
 
@@ -532,11 +527,6 @@ function bpdf_generate_pdf($width, $height, $config, $filename) {
 					break;
 				}
 				case 'tpa': {
-					bpdf_pdf_text($data, $pdf);
-
-					break;
-				}
-				case 'tca': {
 					bpdf_pdf_text($data, $pdf);
 
 					break;
@@ -744,6 +734,20 @@ function bpdf_merge_pdfs($array, $filename) {
 }
 
 
+//  ███    █▄      ▄████████     ▄████████  
+//  ███    ███    ███    ███    ███    ███  
+//  ███    ███    ███    █▀     ███    █▀   
+//  ███    ███    ███          ▄███▄▄▄      
+//  ███    ███  ▀███████████  ▀▀███▀▀▀      
+//  ███    ███           ███    ███    █▄   
+//  ███    ███     ▄█    ███    ███    ███  
+//  ████████▀    ▄████████▀     ██████████
+
+//
+// FUNCTIONS HERE TO MAKE PDF GENERATION EASY
+//
+
+
 //   ▄█   ███▄▄▄▄▄     ▄█       ███      
 //  ███   ███▀▀▀▀██▄  ███   ▀█████████▄  
 //  ███▌  ███    ███  ███▌     ▀███▀▀██  
@@ -754,7 +758,9 @@ function bpdf_merge_pdfs($array, $filename) {
 //  █▀     ▀█    █▀   █▀       ▄████▀
 
 function bpdf_init($dir) {
-	// do something
+	if (!defined('_UPLOAD_DIR')) {
+		define('_UPLOAD_DIR', wp_upload_dir()['path']);
+	}
 }
 
 
@@ -790,5 +796,32 @@ add_action('rest_api_init', function() {
 	$api = new _bpdfAPI();
 	$api->add_routes();
 });
+
+/*
+
+{
+    "ga_1":{
+        "asset_bottom":"17",
+        "asset_left":"45",
+        "asset_height":"5.4",
+        "asset_graphic":"SCC_Swissport_SVG.svg"
+    },
+    "tpa_1":{
+        "asset_bottom":"6.6",
+        "asset_left":"4.1",
+        "asset_width":"68",
+        "asset_height":"2.8",
+        "text_font":"MarkPro-Bold.ttf",
+        "text_align":"left",
+        "font_height":"2.8",
+        "max_lines":"1",
+        "size_method":"shrink",
+        "font_min":"2.8",
+        "asset_text":"FIRST SURNAME",
+        "font_colour":"0,100,100,0"
+    }
+}
+
+*/
 
 // eof
