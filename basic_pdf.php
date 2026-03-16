@@ -18,6 +18,7 @@ define('_PLUGIN_BASIC_PDF_ICON', '<svg xmlns="http://www.w3.org/2000/svg" viewBo
 
 define('_URL_BASIC_PDF', plugin_dir_url(__FILE__));
 define('_PATH_BASIC_PDF', plugin_dir_path(__FILE__));
+define('_PTM', 0.352778);
 
 //   ▄████████   ▄██████▄   ███▄▄▄▄▄       ▄████████  
 //  ███    ███  ███    ███  ███▀▀▀▀██▄    ███    ███  
@@ -38,6 +39,10 @@ define('_ARGS_BASIC_PDF', [
 	'overwrite' => [
 		'type' => 'string',
 		'default' => 'no'
+	],
+	'colour_mode' => [
+		'type' => 'string',
+		'default' => 'rgb'
 	]
 ]);
 
@@ -55,6 +60,15 @@ define('_ADMIN_BASIC_PDF', [
 			'overwrite' => [
 				'label' => 'Overwrite File',
 				'type' => 'check'
+			],
+			'colour_mode' => [
+				'label' => 'Colour Mode',
+				'type' => 'select',
+				'values' => [
+					'hex' => 'HEX',
+					'rgb' => 'RGB',
+					'cmyk' => 'CMYK'
+				]
 			]
 		]
 	]
@@ -344,20 +358,6 @@ class _bpdfMenu {
 	}
 }
 
-// menu stuff
-
-function bpdf_set_current_menu($parent_file) {
-	global $submenu_file, $current_screen, $pagenow;
-
-	if (in_array($current_screen->id, ['edit-svg', 'svg'])) {
-		if ($pagenow == 'post.php') {
-			$submenu_file = 'edit.php?post_type=' . $current_screen->post_type;
-		}
-		$parent_file = _PLUGIN_BASIC_PDF . '-menu';
-	}
-	return $parent_file;
-}
-
 
 //     ▄███████▄  ████████▄      ▄████████  
 //    ███    ███  ███   ▀███    ███    ███  
@@ -368,6 +368,8 @@ function bpdf_set_current_menu($parent_file) {
 //    ███         ███   ▄███    ███         
 //   ▄████▀       ████████▀     ███
 
+// load our libraries
+
 function bpdf_load_libs($fpdi = false) {
 	require_once(__DIR__ . '/lib/tcpdf.php');
 
@@ -375,6 +377,35 @@ function bpdf_load_libs($fpdi = false) {
 		require_once(__DIR__ . '/lib/fpdi.php');
 	}
 }
+
+// handle ttf font upload to the media library
+// and create our pdf font definitions files
+
+function bpdf_font_handler($aid) {
+    $file = get_attached_file($aid);
+    $mime = get_post_mime_type($aid);
+
+    if (strtolower(pathinfo($file, PATHINFO_EXTENSION)) === 'ttf' || $mime === 'font/ttf') {
+        s9pdf_create_font_defs($file);
+    }
+}
+
+// create our font defintions folder if needed
+// and add in helvetica for default text
+
+function bpdf_make_folder($dir) {
+	$fonts = $dir . 'fonts';
+
+	if (!is_dir($fonts)) {
+		mkdir($fonts, 0755);
+	}
+
+	if (!file_exists($fonts . '/helvetica.php')) {
+		file_put_contents($fonts . '/helvetica.php', '<' . '?php ' . '$type="core";$name="Helvetica";$up=-100;$ut=50;$dw=513;$diff="";$enc="";$desc=array("Flags"=>32,"FontBBox"=>"[-166 -225 1000 931]","ItalicAngle"=>0,"Ascent"=>931,"Descent"=>-225,"Leading"=>0,"CapHeight"=>718,"XHeight"=>523,"StemV"=>88,"StemH"=>76,"AvgWidth"=>513,"MaxWidth"=>1015,"MissingWidth"=>513);$cw=array(0=>500,1=>500,2=>500,3=>500,4=>500,5=>500,6=>500,7=>500,8=>500,9=>500,10=>500,11=>500,12=>500,13=>500,14=>500,15=>500,16=>500,17=>500,18=>500,19=>500,20=>500,21=>500,22=>500,23=>500,24=>500,25=>500,26=>500,27=>500,28=>500,29=>500,30=>500,31=>500,32=>278,33=>278,34=>355,35=>556,36=>556,37=>889,38=>667,39=>191,40=>333,41=>333,42=>389,43=>584,44=>278,45=>333,46=>278,47=>278,48=>556,49=>556,50=>556,51=>556,52=>556,53=>556,54=>556,55=>556,56=>556,57=>556,58=>278,59=>278,60=>584,61=>584,62=>584,63=>556,64=>1015,65=>667,66=>667,67=>722,68=>722,69=>667,70=>611,71=>778,72=>722,73=>278,74=>500,75=>667,76=>556,77=>833,78=>722,79=>778,80=>667,81=>778,82=>722,83=>667,84=>611,85=>722,86=>667,87=>944,88=>667,89=>667,90=>611,91=>278,92=>278,93=>277,94=>469,95=>556,96=>333,97=>556,98=>556,99=>500,100=>556,101=>556,102=>278,103=>556,104=>556,105=>222,106=>222,107=>500,108=>222,109=>833,110=>556,111=>556,112=>556,113=>556,114=>333,115=>500,116=>278,117=>556,118=>500,119=>722,120=>500,121=>500,122=>500,123=>334,124=>260,125=>334,126=>584,127=>500,128=>655,129=>500,130=>222,131=>278,132=>333,133=>1000,134=>556,135=>556,136=>333,137=>1000,138=>667,139=>250,140=>1000,141=>500,142=>611,143=>500,144=>500,145=>222,146=>221,147=>333,148=>333,149=>350,150=>556,151=>1000,152=>333,153=>1000,154=>500,155=>250,156=>938,157=>500,158=>500,159=>667,160=>278,161=>278,162=>556,163=>556,164=>556,165=>556,166=>260,167=>556,168=>333,169=>737,170=>370,171=>448,172=>584,173=>333,174=>737,175=>333,176=>606,177=>584,178=>350,179=>350,180=>333,181=>556,182=>537,183=>278,184=>333,185=>350,186=>365,187=>448,188=>869,189=>869,190=>879,191=>556,192=>667,193=>667,194=>667,195=>667,196=>667,197=>667,198=>1000,199=>722,200=>667,201=>667,202=>667,203=>667,204=>278,205=>278,206=>278,207=>278,208=>722,209=>722,210=>778,211=>778,212=>778,213=>778,214=>778,215=>584,216=>778,217=>722,218=>722,219=>722,220=>722,221=>667,222=>666,223=>611,224=>556,225=>556,226=>556,227=>556,228=>556,229=>556,230=>896,231=>500,232=>556,233=>556,234=>556,235=>556,236=>251,237=>251,238=>251,239=>251,240=>556,241=>556,242=>556,243=>556,244=>556,245=>556,246=>556,247=>584,248=>611,249=>556,250=>556,251=>556,252=>556,253=>500,254=>555,255=>500);');
+	}
+}
+
+// create font definitions from file
 
 function bpdf_create_font_defs($font_file) {
 	if (!$font_file) {
@@ -397,7 +428,6 @@ function bpdf_create_font_defs($font_file) {
 		if ((!file_exists($compressed)) || (!file_exists($definitions))) {
 			$fm = new TCPDF_FONTS();
 			$fm->addTTFfont($font, 'TrueTypeUnicode', '', 32, $dir . 'fonts/');
-			update_post_meta($post_id, '_bt_font_defs', $name);
 		}
 	}
 }
@@ -433,7 +463,9 @@ function bpdf_split_lines($pdf, $text, $width) {
 	return $lines;
 }
 
-function bpdf_get_rgb($value) {
+// c,m,y,k to [r,g,b] function
+
+function bpdf_cmyk_rgb($value) {
 	$parts = explode(',', $value);
 
 	if (count($parts) == 4) {
@@ -464,8 +496,60 @@ function bpdf_get_rgb($value) {
 	return false;
 }
 
-function bpdf_generate_pdf($width, $height, $config, $filename) {
-	$doc = (is_array($config)) ? $config : json_decode($config, true);
+// r,g,b to [r,g,b] function
+
+function bpdf_rgb_rgb($value) {
+	$parts = explode(',', $value);
+
+	if (count($parts) == 3) {
+		return [
+			'r' => intval(trim($parts[0])),
+			'g' => intval(trim($parts[1])),
+			'b' => intval(trim($parts[2]))
+		];
+	}
+
+	return false;
+}
+
+// #rrggbb to [r,g,b] function
+
+function bpdf_hex_rgb($value) {
+	list($r, $g, $b) = sscanf($value, '#%02x%02x%02x');
+
+	return [
+		'r' => intval($r),
+		'g' => intval($g),
+		'b' => intval($b)
+	];
+}
+
+// get colours
+
+function bpdf_get_colours($colour) {
+	switch (_BPDF['colour_mode']) {
+		case 'rgb': {
+			$colours = bpdf_rgb_rgb($colour);
+			break;
+		}
+		case 'cmyk': {
+			$colours = bpdf_cmyk_rgb($colour);
+			break;
+		}
+		case 'hex': {
+			$colours = bpdf_hex_rgb($colour);
+			break;
+		}
+		default: {
+			$colours = false;
+		}
+	}
+
+	return $colours;
+}
+
+function bpdf_generate_pdf($width, $height, $data, $filename, $template = false) {
+	$doc = (is_array($data)) ? $data : json_decode($data, true);
 
 	$result = false;
 
@@ -474,67 +558,82 @@ function bpdf_generate_pdf($width, $height, $config, $filename) {
 		$dir = $upload_dir['basedir'] . '/';
 
 		bpdf_make_folder($dir);
-		bpdf_load_libs();
+		bpdf_load_libs($template);
 
-		$pdf = new TCPDF('L', 'mm', [$width, $height]);
-		$pdf->SetMargins(0, 0, 0, 0);
-		$pdf->setPrintHeader(false);
-		$pdf->setPrintFooter(false);
-		$pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
-		$pdf->SetAutoPageBreak(false, 0);
-		$pdf->SetCellHeightRatio(1);
+		if ($template) {
+			$pdf = new Fpdi();
+			$pages = $pdf->setSourceFile(_UPLOAD_DIR . '/' . $template);
 
-		$pdf->AddPage();
+			for ($page_num = 1; $page_num <= $pages; $page_num++) {
+				$template_id = $pdf->importPage($page_num);
+				$size = $pdf->getTemplateSize($template_id);
+				$pdf->setPrintHeader(false);
+				$pdf->setPrintFooter(false);
+				$pdf->SetAutoPageBreak(true, 0);
 
-		foreach ($doc as $asset => $data_object) {
-			list($type, $num) = explode('_', $asset);
-
-			$data = (array)$data_object;
-
-			switch ($type) {
-				case 'ga': {
-					if ($data['asset_graphic']) {
-						$pdf->ImageSVG($data['asset_graphic'], $data['asset_left'], ($data['asset_bottom'] - $data['asset_height']), 0, $data['asset_height']);
-					}
-
-					break;
+				for ($x = 1; $x <= count($doc); $x++) {
+					$pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
+					$pdf->useTemplate($template_id);
 				}
-				case 'gpa': {
-					bpdf_pdf_graphic('asset_graphic', $data, $pdf);
+			}
+		}
+		else {
+			$pdf = new TCPDF('L', 'mm', [$width, $height]);
+			$pdf->SetMargins(0, 0, 0, 0);
+			$pdf->setPrintHeader(false);
+			$pdf->setPrintFooter(false);
+			$pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
+			$pdf->SetAutoPageBreak(false, 0);
+			$pdf->SetCellHeightRatio(1);
 
-					break;
-				}
-				case 'ta': {
-					$font = pathinfo($data['text_font'], PATHINFO_FILENAME);
+			for ($x = 1; $x <= count($doc); $x++) {
+				$pdf->AddPage();
+			}
+		}
 
-					$pdf->AddFont($font, '', $font . '.php', $dir);
-					$pdf->SetFont($font, '', ($data['font_height'] / _PTM));
+		foreach ($doc as $page => $page_data) {
+			list($void, $page_num) = explode('_', $page);
+			$pdf->setPage((int)$page_num);
 
-					if (isset($data['font_colour']) && ($data['font_colour'] != '')) {
-						$colours = m_get_rgb($data['font_colour']);
+			foreach ($page_data as $asset => $data_object) {
+				list($type, $num) = explode('_', $asset);
 
-						if ($colours && is_array($colours)) {
-							$pdf->SetTextColor($colours['r'], $colours['g'], $colours['b']);
-						}
+				$data = (array)$data_object;
+
+				switch ($type) {
+					case 'g': {
+						bpdf_pdf_graphic('graphic', $data, $pdf);
+
+						break;
 					}
-					else {
-						$pdf->SetTextColor(0, 0, 0);
+					case 't': {
+						bpdf_pdf_text($data, $pdf);
+
+						break;
 					}
+					case 'u': {
+						// url
+						bpdf_pdf_link($data, $pdf);
 
-					$pdf->SetXY($data['asset_left'], $data['asset_bottom']);
-					$pdf->Cell(0, $data['font_height'], $data['asset_text'], 0, 0, 'L', 0, '', 0, false, 'B', 'B');
+						break;
+					}
+					case 'b': {
+						// box
+						bpdf_pdf_box($data, $pdf);
 
-					break;
-				}
-				case 'tpa': {
-					bpdf_pdf_text($data, $pdf);
+						break;
+					}
+					case 'r': {
+						// rectangle
+						//bpdf_pdf_rect($data, $pdf);
 
-					break;
+						break;
+					}
 				}
 			}
 		}
 
-		$file = $dir . 'pdfs/' . $filename . '.pdf';
+		$file = _UPLOAD_DIR . '/' . $filename . '.pdf';
 
 		if (file_exists($file)) {
 			if (_BPDF['overwrite']) {
@@ -560,32 +659,45 @@ function bpdf_pdf_graphic($check, &$data, &$pdf) {
 		$ext = strtoupper(pathinfo($image, PATHINFO_EXTENSION));
 
 		if (in_array($ext, ['PNG', 'JPG', 'JPEG'])) {
-			$pdf->Image($image, $data['asset_left'], ($data['asset_bottom'] - $data['asset_height']), $data['asset_width'], $data['asset_height'], $ext, '', '', true, 300);
+			$left = $data['left'] ?? 0;
+			$bottom = $data['bottom'] ?? 0;
+			$width = $data['width'] ?? -1;
+			$height = $data['height'] ?? -1;
+
+			$pdf->Image($image, $left, ($bottom - $height), $width, $height, $ext, '', '', true, 300);
 		}
 		else {
 			$pdf->SetFont('helvetica', '', 10);
-			$pdf->SetXY($data['asset_left'], $data['asset_bottom']);
+			$pdf->SetXY($data['left'], ($data['bottom'] - $data['height']));
 			$pdf->Cell(0, 10, 'unsupported image format', 0, 1, 'C');
 		}
 	}
 	else {
 		$image = '@' . '<svg viewBox="0 0 20 20" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><rect x="0" y="0" width="20" height="20" fill="none" stroke="black" stroke-width="2" /><line x1="0" y1="0" x2="20" y2="20" stroke="black" stroke-width="1" /><line x1="20" y1="0" x2="0" y2="20" stroke="black" stroke-width="1" /></svg>';
-		$pdf->ImageSVG($image, $data['asset_left'], ($data['asset_bottom'] - $data['asset_height']), $data['asset_width'], $data['asset_height']);
+		$pdf->ImageSVG($image, $data['left'], ($data['bottom'] - $data['height']), $data['width'], $data['height']);
 	}
 }
 
 function bpdf_pdf_text(&$data, &$pdf) {
 	$dir = wp_upload_dir()['basedir'] . '/';
-	$font = pathinfo($data['text_font'], PATHINFO_FILENAME);
+
 	$size = ($data['font_height'] / _PTM);
 	$lines = $data['max_lines'];
-	$text = $data['asset_chosen'] ?? ($data['asset_text'] ?? $data['asset_description']);
+	$text = $data['text'];
 
-	$pdf->AddFont($font, '', $font . '.php', $dir);
+	if ($data['font_name'] != '') {
+		$font = pathinfo($data['font_name'], PATHINFO_FILENAME);
+
+		$pdf->AddFont($font, '', $font . '.php', $dir);
+	}
+	else {
+		$font = 'helvetica';
+	}
+
 	$pdf->SetFont($font, '', $size);
 
 	if (isset($data['font_colour']) && ($data['font_colour'] != '')) {
-		$colours = m_get_rgb($data['font_colour']);
+		$colours = bpdf_get_colours($data['font_colour']);
 
 		if ($colours && is_array($colours)) {
 			$pdf->SetTextColor($colours['r'], $colours['g'], $colours['b']);
@@ -594,6 +706,7 @@ function bpdf_pdf_text(&$data, &$pdf) {
 	else {
 		$pdf->SetTextColor(0, 0, 0);
 	}
+
 
 	switch ($data['text_align']) {
 		case 'centre': {
@@ -612,101 +725,108 @@ function bpdf_pdf_text(&$data, &$pdf) {
 
 	switch ($data['size_method']) {
 		case 'shrink': {
-			while ($pdf->GetStringWidth($text) > $data['asset_width'] && $size > ($data['font_min'] / _PTM)) {
+			while ($pdf->GetStringWidth($text) > $data['width'] && $size > ($data['font_min'] / _PTM)) {
 				$size--;
 				$pdf->SetFont($font, '', $size);
 			}
 
-			$pdf->SetXY($data['asset_left'], $data['asset_bottom']);
-			$pdf->Cell($data['asset_width'], $data['asset_height'], $text, 0, 0, $align, 0, '', 0, false, 'B', 'B');
+			$pdf->SetXY($data['left'], $data['bottom']);
+			$pdf->Cell($data['width'], $data['height'], $text, 0, 0, $align, 0, '', 0, false, 'B', 'B');
 
 			break;
 		}
 		case 'lines': {
-			if ($pdf->GetStringWidth($text) > $data['asset_width']) {
-				$text_lines = m_split_lines($pdf, $text, $data['asset_width']);
-				$new_lines = [];
-
-				for ($x = 0; $x < $lines; $x++) {
-					$new_lines[] = $text_lines[$x];
-				}
-
-				$pdf->SetXY($data['asset_left'], ($data['asset_bottom'] - ($data['asset_height'] * $lines)));
-				$pdf->MultiCell($data['asset_width'], $size, implode("\n", $new_lines), 0, $align, false, 0, '', '', false, 0, false, false, $data['asset_height'] * $lines, 'B', false);
-			}
-			else {
-				$pdf->SetXY($data['asset_left'], $data['asset_bottom']);
-				$pdf->Cell($data['asset_width'], $data['asset_height'], $text, 0, 0, $align, 0, '', 0, false, 'B', 'B');
-			}
+			$pdf->SetXY($data['left'], $data['top']);
+			$pdf->MultiCell($data['width'], $data['height'], $text, 0, $align, false, 0, '', '', false, 0, false, false, $data['height'], 'B', false);
 			break;
 		}
 		case 'shrink-lines': {
-			while ($pdf->GetStringWidth($text) > $data['asset_width'] && $size > ($data['font_min'] / _PTM)) {
+			while ($pdf->GetStringWidth($text) > $data['width'] && $size > ($data['font_min'] / _PTM)) {
 				$size--;
 				$pdf->SetFont($font, '', $size);
 			}
 
-			if ($pdf->GetStringWidth($text) > $data['asset_width']) {
-				$text_lines = m_split_lines($pdf, $text, $data['asset_width']);
+			if ($pdf->GetStringWidth($text) > $data['width']) {
+				$text_lines = bpdf_split_lines($pdf, $text, $data['width']);
 				$new_lines = [];
 
 				for ($x = 0; $x < $lines; $x++) {
 					$new_lines[] = str_replace("\n", ' ', $text_lines[$x]);
 				}
 
-				$pdf->SetXY($data['asset_left'], ($data['asset_bottom'] - ($data['asset_height'] * $lines)));
-				$pdf->MultiCell($data['asset_width'], $size, implode("\n", $new_lines), 0, $align, false, 0, '', '', false, 0, false, false, $data['asset_height'] * $lines, 'B', false);
+				$pdf->SetXY($data['left'], ($data['bottom'] - ($data['height'] * $lines)));
+				$pdf->MultiCell($data['width'], $size, implode("\n", $new_lines), 0, $align, false, 0, '', '', false, 0, false, false, $data['height'] * $lines, 'B', false);
 			}
 			else {
-				$pdf->SetXY($data['asset_left'], $data['asset_bottom']);
-				$pdf->Cell($data['asset_width'], $data['asset_height'], $text, 0, 0, $align, 0, '', 0, false, 'B', 'B');
+				$pdf->SetXY($data['left'], $data['bottom']);
+				$pdf->Cell($data['width'], $data['height'], $text, 0, 0, $align, 0, '', 0, false, 'B', 'B');
 			}
 
 			break;
 		}
 		case 'lines-shrink': {
-			if ($pdf->GetStringWidth($text) > $data['asset_width']) {
-				$text_lines = m_split_lines($pdf, $text, $data['asset_width']);
+			if ($pdf->GetStringWidth($text) > $data['width']) {
+				$text_lines = bpdf_split_lines($pdf, $text, $data['width']);
 
 				while (count($text_lines) > $lines) {
 					$size--;
 					$pdf->SetFont($font, '', $size);
-					$text_lines = m_split_lines($pdf, $text, $data['asset_width']);
+					$text_lines = bpdf_split_lines($pdf, $text, $data['width']);
 				}
 
 				$output = $text;
 
-				$pdf->SetXY($data['asset_left'], ($data['asset_bottom'] - ($data['asset_height'] * $lines)));
-				$pdf->MultiCell($data['asset_width'], $size, $output, 0, $align, false, 0, '', '', true, 0, false, false, $size * $lines, 'B', false);
+				$pdf->SetXY($data['left'], ($data['bottom'] - ($data['height'] * $lines)));
+				$pdf->MultiCell($data['width'], $size, $output, 0, $align, false, 0, '', '', true, 0, false, false, $size * $lines, 'B', false);
 			}
 			else {
-				$pdf->SetXY($data['asset_left'], $data['asset_bottom']);
-				$pdf->Cell($data['asset_width'], $data['asset_height'], $text, 0, 0, $align, 0, '', 0, false, 'B', 'B');
+				$pdf->SetXY($data['left'], $data['bottom']);
+				$pdf->Cell($data['width'], $data['height'], $text, 0, 0, $align, 0, '', 0, false, 'B', 'B');
 			}
 
 			break;
 		}
 		default: {
-			$pdf->SetXY($data['asset_left'], $data['asset_bottom']);
-			$pdf->Cell($data['asset_width'], $data['asset_height'], $text, 0, 0, $align, 0, '', 0, false, 'B', 'B');
+			$pdf->SetXY($data['left'], $data['bottom']);
+			$pdf->Cell($data['width'], $data['height'], $text, 0, 0, $align, 0, '', 0, false, 'B', 'B');
 			break;
 		}
 	}
 }
 
-function bpdf_make_folder($dir) {
-	$pdfs = $dir . 'pdfs';
+// add link to pdf
 
-	if (!is_dir($pdfs)) {
-		mkdir($pdfs, 0755);
+function bpdf_pdf_link(&$data, &$pdf) {
+	if (isset($data['text'])) {
+		$pdf->SetXY($data['left'], $data['top']);
+		$pdf->Write($data['height'], $data['text'], $data['url'], false, 'L', true);
+	}
+	else {
+		$pdf->Link($data['left'], $data['top'], $data['width'], $data['height'], $data['url']);
 	}
 
-	$fonts = $dir . 'fonts';
-
-	if (!is_dir($fonts)) {
-		mkdir($fonts, 0755);
+	if (isset($data['border']) && $data['border']) {
+		$pdf->SetDrawColor(0, 0, 0);
+		$pdf->SetLineWidth(0.5);
+		$pdf->Rect($data['left'], $data['top'], $data['width'], $data['height'], 'D');
 	}
 }
+
+// add a filled box to pdf
+
+function bpdf_pdf_box(&$data, &$pdf) {
+	if (isset($data['colour']) && ($data['colour'] != '')) {
+		$colours = bpdf_get_colours($data['colour']);
+		$pdf->SetFillColor($colours['r'], $colours['g'], $colours['b']);
+	}
+	else {
+		$pdf->SetFillColor(0, 0, 0);
+	}
+
+	$pdf->Rect($data['left'], $data['top'], $data['width'], $data['height'], 'F');
+}
+
+// merge multiple pdfs into one
 
 function bpdf_merge_pdfs($array, $filename) {
 	bpdf_load_libs(true);
@@ -715,7 +835,7 @@ function bpdf_merge_pdfs($array, $filename) {
 
 	if (is_array($array) && count($array) > 0) {
 		foreach ($array as $file) {
-			$pages = $pdf->setSourceFile(_UPLOAD_DIR . '/pdfs/' . $file);
+			$pages = $pdf->setSourceFile(_UPLOAD_DIR . '/' . $file);
 
 			for ($page_num = 1; $page_num <= $pages; $page_num++) {
 				$template_id = $pdf->importPage($page_num);
@@ -729,8 +849,15 @@ function bpdf_merge_pdfs($array, $filename) {
 			}
 		}
 
-		$pdf->Output(_UPLOAD_DIR . '/pdfs/' . $filename . '.pdf', 'F');
+		$result = $filename . '.pdf';
+		$pdf->Output(_UPLOAD_DIR . '/' . $result, 'F');
+
+		if (file_exists(_UPLOAD_DIR . '/' . $result)) {
+			return $result;
+		}
 	}
+
+	return false;
 }
 
 
@@ -743,9 +870,68 @@ function bpdf_merge_pdfs($array, $filename) {
 //  ███    ███     ▄█    ███    ███    ███  
 //  ████████▀    ▄████████▀     ██████████
 
-//
-// FUNCTIONS HERE TO MAKE PDF GENERATION EASY
-//
+/*
+
+CLASS FUNCTIONS HERE TO MAKE PDF GENERATION EASY
+
+$width and $height are in mm
+$data is an array like this:
+
+$page_1['t_1'] = [
+	'bottom' => '54',
+	'left' => '53',
+	'width' => '180',
+	'height' => '9',
+	'font_name' => 'lato-bold',
+	'text_align' => 'left',
+	'font_height' => '9',
+	'max_lines' => '1',
+	'size_method' => 'shrink',
+	'font_min' => '10',
+	'text' => 'hello, world!',
+	'font_colour' => '100,28,0,22'
+];
+
+$page_1['g_1'] = [
+	'bottom' => '100',
+	'left' => '10',
+	'height' => '30',
+	'graphic' => 'test-image.png'
+];
+
+$data = [
+	'page_1' => $page_1
+];
+
+...then passed like this:
+
+json_encode($data)
+
+$file is the name of the output pdf
+
+$template if supplied is the pdf to add the content to
+and width/height are ignored as it uses the size of the
+template pdf
+
+size_method for text is what happens if text is too wide for specified
+width at the specified font_size. options are:
+
+- shrink = the text size is reduced in size to fit
+- lines = the text is split on to multiple lines up to max_lines
+- shrink-lines = shrink text to font_min size, and then split on to lines if need be
+- lines-shrink = split on to multiple lines up to max_lines, and then shrink text if need be
+
+*/
+
+class BPDF {
+	public static function generate($width, $height, $data, $file, $template = false) {
+		return bpdf_generate_pdf($width, $height, $data, $file, $template);
+	}
+
+	public static function merge($files_in, $file_out) {
+		return bpdf_merge_pdfs($files_in, $file_out);
+	}
+}
 
 
 //   ▄█   ███▄▄▄▄▄     ▄█       ███      
@@ -760,6 +946,10 @@ function bpdf_merge_pdfs($array, $filename) {
 function bpdf_init($dir) {
 	if (!defined('_UPLOAD_DIR')) {
 		define('_UPLOAD_DIR', wp_upload_dir()['path']);
+	}
+
+	if (_BPDF['active'] == 'yes') {
+		// do something maybe?
 	}
 }
 
@@ -778,10 +968,7 @@ define('_BPDF', _bpdfSettings::get_settings());
 // actions
 
 add_action('init', 'bpdf_init');
-
-// filters
-
-add_filter('parent_file', 'bpdf_set_current_menu');
+add_action('add_attachment', 'bpdf_font_handler');
 
 // boot plugin
 
@@ -800,26 +987,28 @@ add_action('rest_api_init', function() {
 /*
 
 {
-    "ga_1":{
-        "asset_bottom":"17",
-        "asset_left":"45",
-        "asset_height":"5.4",
-        "asset_graphic":"SCC_Swissport_SVG.svg"
-    },
-    "tpa_1":{
-        "asset_bottom":"6.6",
-        "asset_left":"4.1",
-        "asset_width":"68",
-        "asset_height":"2.8",
-        "text_font":"MarkPro-Bold.ttf",
-        "text_align":"left",
-        "font_height":"2.8",
-        "max_lines":"1",
-        "size_method":"shrink",
-        "font_min":"2.8",
-        "asset_text":"FIRST SURNAME",
-        "font_colour":"0,100,100,0"
-    }
+	"page_1": {
+		"g_1":{
+			"asset_bottom":"17",
+			"asset_left":"45",
+			"asset_height":"5.4",
+			"asset_graphic":"test-image.png"
+		},
+		"t_1":{
+			"asset_bottom":"6.6",
+			"asset_left":"4.1",
+			"asset_width":"68",
+			"asset_height":"2.8",
+			"text_font":"",
+			"text_align":"left",
+			"font_height":"2.8",
+			"max_lines":"1",
+			"size_method":"shrink",
+			"font_min":"2.8",
+			"asset_text":"test text",
+			"font_colour":"0,100,100,0"
+		}
+	}
 }
 
 */
